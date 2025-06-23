@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>国産車おすすめ診断サイト</title>
+
+  <!-- OGP -->
+  <meta property="og:title"       content="国産車おすすめ診断サイト">
+  <meta property="og:description" content="質問に答えるだけであなたにぴったりの国産新車を提案します">
+  <meta property="og:type"        content="website">
+  <meta property="og:image"       content="https://example.com/ogp.jpg">
+  <meta property="og:url"         content="https://example.com">
+
+  <style>
+    /* Base -------------------------------------------------- */
+    :root {
+      --brand-blue:#0066ff;
+      --brand-blue-light:#3385ff;
+      --bg:#ffffff;
+      --text:#333333;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:"Helvetica Neue",Arial,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}
+    a{color:var(--brand-blue);text-decoration:none;}
+    img{max-width:100%;height:auto;border-radius:1rem;}
+    h1,h2,h3{margin:0 0 1rem;}
+    button{cursor:pointer;border:none;padding:0.8rem 1.6rem;border-radius:1rem;font-size:1rem;background:var(--brand-blue);color:#fff;transition:box-shadow .2s ease,transform .1s ease;}
+    button:hover{box-shadow:0 4px 8px rgba(0,0,0,.15);transform:translateY(-2px);}
+    button:disabled{opacity:.5;cursor:not-allowed;}
+
+    /* Layout ------------------------------------------------ */
+    .container{width:90%;max-width:900px;margin:0 auto;padding:2rem 0;}
+    /* Hero -------------------------------------------------- */
+    #hero{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4rem 1rem 6rem;background:linear-gradient(135deg,var(--brand-blue) 0%,var(--brand-blue-light) 100%);color:#fff;}
+    #hero h1{font-size:2rem;margin-bottom:0.5rem;}
+    .note{font-size:0.9rem;opacity:0.8;margin-bottom:1.5rem;}
+    @media(min-width:600px){#hero h1{font-size:2.5rem;}}
+
+    /* Steps ------------------------------------------------- */
+    #formSection{display:none;}
+    .step{display:none;flex-direction:column;}
+    .step.active{display:flex;}
+    .options{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;}
+    .options label{display:flex;align-items:center;gap:0.5rem;background:#f5f5f5;border-radius:1rem;padding:0.8rem;cursor:pointer;transition:background .2s ease,box-shadow .2s ease;}
+    .options input{margin:0;}
+    .options label:hover{background:#ebf2ff;box-shadow:0 4px 8px rgba(0,0,0,.05);}  
+    .progress{height:8px;background:#e0e0e0;border-radius:4px;margin:1.5rem 0;overflow:hidden;}
+    .progress-bar{height:100%;background:var(--brand-blue);width:0%;transition:width .3s ease;}
+    .navBtns{display:flex;justify-content:space-between;margin-top:2rem;}
+
+    /* Result ------------------------------------------------ */
+    #resultSection{display:none;}
+    .cards{display:grid;grid-template-columns:1fr;gap:2rem;margin-top:2rem;}
+    @media(min-width:700px){.cards{grid-template-columns:1fr 1fr 1fr;}}
+    .card{background:#fff;border-radius:1rem;padding:1rem;box-shadow:0 2px 6px rgba(0,0,0,.05);display:flex;flex-direction:column;height:100%;}
+    .card h3{margin:0.6rem 0;}
+    .specs{font-size:0.9rem;margin-bottom:1rem;line-height:1.4;}
+    .card button{margin-top:auto;width:100%;}
+
+    /* Footer ----------------------------------------------- */
+    footer{margin-top:4rem;padding:2rem 1rem;text-align:center;background:#f8f8f8;font-size:0.9rem;}
+    .share-btn{background:#25d366;}
+  </style>
+</head>
+<body>
+  <!-- Hero Section -->
+  <section id="hero">
+    <h1>あなたにぴったりの<br>国産新車を診断します</h1>
+    <p class="note">※2025年6月現在の国内新車ラインアップに基づいています</p>
+    <button id="startBtn" aria-label="診断スタート">診断スタート</button>
+  </section>
+
+  <!-- Question Form Section -->
+  <section id="formSection" class="container" aria-label="質問フォーム">
+    <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+    <!-- Steps will be injected here -->
+
+    <div class="navBtns">
+      <button id="prevBtn">戻る</button>
+      <button id="nextBtn">次へ</button>
+    </div>
+  </section>
+
+  <!-- Result Section -->
+  <section id="resultSection" class="container" aria-label="診断結果">
+    <h2>おすすめの車はこちら！</h2>
+    <div id="cards" class="cards"></div>
+    <button id="retryBtn" style="display:none">条件を緩めて再診断</button>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2025 国産車おすすめ診断</p>
+    <button class="share-btn" id="shareBtn" aria-label="結果をシェア">結果をシェア</button>
+  </footer>
+
+  <script>
+    // ---------------- データ ----------------
+    /**
+     * 2025年6月時点 国内販売中の国産車（主要車種を抜粋、実際のグレード構成に合わせ簡易化）
+     * price = 車両本体価格(万円)の最も安いグレードのおおよそ
+     */
+    const cars=[
+      // Toyota
+      {maker:"トヨタ",model:"アクア",type:"コンパクト",seats:5,drive:"2WD",fuel:"ハイブリッド",price:210,img:"images/アクア.png",url:"https://toyota.jp/aqua/"},
+      {maker:"トヨタ",model:"ヤリス",type:"コンパクト",seats:5,drive:"2WD",fuel:"ガソリン",price:155,img:"images/ヤリス.png",url:"https://toyota.jp/yaris/"},
+      {maker:"トヨタ",model:"ヤリスクロス",type:"SUV",seats:5,drive:"2WD",fuel:"ハイブリッド",price:220,img:"images/ヤリスクロス.png",url:"https://toyota.jp/yariscross/"},
+      {maker:"トヨタ",model:"プリウス",type:"セダン",seats:5,drive:"2WD",fuel:"ハイブリッド",price:320,img:"images/プリウス.png",url:"https://toyota.jp/prius/"},
+      {maker:"トヨタ",model:"クラウン(クロスオーバー)",type:"セダン",seats:5,drive:"4WD",fuel:"ハイブリッド",price:435,img:"images/クラウン（クロスオーバー）.png",url:"https://toyota.jp/crown/"},
+      {maker:"トヨタ",model:"RAV4",type:"SUV",seats:5,drive:"4WD",fuel:"ガソリン",price:288,img:"images/RAV4.png",url:"https://toyota.jp/rav4/"},
+      {maker:"トヨタ",model:"アルファード",type:"ミニバン",seats:7,drive:"2WD",fuel:"ハイブリッド",price:540,img:"images/アルファード.png",url:"https://toyota.jp/alphard/"},
+      {maker:"トヨタ",model:"ヴォクシー",type:"ミニバン",seats:7,drive:"2WD",fuel:"ハイブリッド",price:340,img:"images/ヴォクシー.png",url:"https://toyota.jp/voxy/"},
+      {maker:"トヨタ",model:"GR86",type:"スポーツ",seats:4,drive:"2WD",fuel:"ガソリン",price:292,img:"images/GR86.png",url:"https://toyota.jp/86/"},
+      {maker:"トヨタ",model:"ランドクルーザー300",type:"SUV",seats:7,drive:"4WD",fuel:"ガソリン",price:510,img:"images/ランドクルーザー300 .png",url:"https://toyota.jp/landcruiser/"},
+      // Lexus
+      {maker:"レクサス",model:"UX",type:"SUV",seats:5,drive:"2WD",fuel:"ハイブリッド",price:390,img:"https://lexus.jp/models/ux/images/index/ogp.jpg",url:"https://lexus.jp/models/ux/"},
+      {maker:"レクサス",model:"NX",type:"SUV",seats:5,drive:"4WD",fuel:"PHEV",price:580,img:"https://lexus.jp/models/nx/images/index/ogp.jpg",url:"https://lexus.jp/models/nx/"},
+      {maker:"レクサス",model:"IS",type:"セダン",seats:5,drive:"2WD",fuel:"ガソリン",price:515,img:"https://lexus.jp/models/is/images/index/ogp.jpg",url:"https://lexus.jp/models/is/"},
+      {maker:"レクサス",model:"LC",type:"スポーツ",seats:4,drive:"2WD",fuel:"ガソリン",price:1350,img:"https://lexus.jp/models/lc/images/index/ogp.jpg",url:"https://lexus.jp/models/lc/"},
+      // Honda
+      {maker:"ホンダ",model:"フィット",type:"コンパクト",seats:5,drive:"2WD",fuel:"ハイブリッド",price:215,img:"https://www.honda.co.jp/fit/webcatalog/styling/design/img/kv.jpg",url:"https://www.honda.co.jp/fit/"},
+      {maker:"ホンダ",model:"シビック",type:"セダン",seats:5,drive:"2WD",fuel:"ガソリン",price:330,img:"https://www.honda.co.jp/CIVIC/webcatalog/styling/design/img/kv.jpg",url:"https://www.honda.co.jp/CIVIC/"},
+      {maker:"ホンダ",model:"ZR-V",type:"SUV",seats:5,drive:"4WD",fuel:"ハイブリッド",price:320,img:"https://www.honda.co.jp/ZR-V/webcatalog/styling/design/img/kv.jpg",url:"https://www.honda.co.jp/ZR-V/"},
+      {maker:"ホンダ",model:"N-BOX",type:"軽",seats:4,drive:"2WD",fuel:"ガソリン",price:150,img:"https://www.honda.co.jp/Nbox/webcatalog/styling/design/img/kv.jpg",url:"https://www.honda.co.jp/Nbox/"},
+      {maker:"ホンダ",model:"ステップワゴン",type:"ミニバン",seats:7,drive:"2WD",fuel:"ハイブリッド",price:320,img:"https://www.honda.co.jp/STEPWGN/webcatalog/styling/design/img/kv.jpg",url:"https://www.honda.co.jp/STEPWGN/"},
+      // Nissan
+      {maker:"日産",model:"ノート",type:"コンパクト",seats:5,drive:"2WD",fuel:"ハイブリッド",price:220,img:"https://www3.nissan.co.jp/vehicles/new/note/e-power/_jcr_content/root/responsivegrid/responsivegrid_524275522/imagewithtext.coreimg.jpeg/1629354674228/note-e20-2108-03-1920.jpg",url:"https://www3.nissan.co.jp/vehicles/new/note.html"},
+      {maker:"日産",model:"セレナ",type:"ミニバン",seats:8,drive:"2WD",fuel:"ハイブリッド",price:300,img:"https://www3.nissan.co.jp/vehicles/new/serena/_jcr_content/car-full-image.img.jpg/1671152574059.jpg",url:"https://www3.nissan.co.jp/vehicles/new/serena.html"},
+      {maker:"日産",model:"エクストレイル",type:"SUV",seats:5,drive:"4WD",fuel:"ハイブリッド",price:368,img:"https://www3.nissan.co.jp/vehicles/new/x-trail/_jcr_content/root/responsivegrid/responsivegrid_2052434113/imagewithtext.coreimg.jpeg/1658469353463/22ym-xtrail-39.jpg",url:"https://www3.nissan.co.jp/vehicles/new/x-trail.html"},
+      {maker:"日産",model:"サクラ",type:"軽",seats:4,drive:"2WD",fuel:"EV",price:240,img:"https://www3.nissan.co.jp/vehicles/new/sakura/_jcr_content/root/responsivegrid/responsivegrid_804901377/imagewithtext.coreimg.jpeg/1687942484267/sakura-03a-02-1280.jpg",url:"https://www3.nissan.co.jp/vehicles/new/sakura.html"},
+      // Mazda
+      {maker:"マツダ",model:"MAZDA2",type:"コンパクト",seats:5,drive:"2WD",fuel:"ガソリン",price:180,img:"https://www.mazda.co.jp/globalassets/assets/cars/mazda2/2023/lp/mainvisual_pc.jpg",url:"https://www.mazda.co.jp/cars/mazda2/"},
+      {maker:"マツダ",model:"CX-5",type:"SUV",seats:5,drive:"4WD",fuel:"ガソリン",price:280,img:"https://www.mazda.co.jp/globalassets/assets/cars/cx-5/2022/lp/main-visual_pc.jpg",url:"https://www.mazda.co.jp/cars/cx-5/"},
+      {maker:"マツダ",model:"ロードスター",type:"スポーツ",seats:2,drive:"2WD",fuel:"ガソリン",price:265,img:"https://www.mazda.co.jp/globalassets/assets/cars/roadster/2023/lp/mainvisual_pc.jpg",url:"https://www.mazda.co.jp/cars/roadster/"},
+      {maker:"マツダ",model:"CX-60",type:"SUV",seats:5,drive:"4WD",fuel:"PHEV",price:540,img:"https://www.mazda.co.jp/globalassets/assets/cars/cx-60/2023/lp/mainvisual_pc.jpg",url:"https://www.mazda.co.jp/cars/cx-60/"},
+      // Subaru
+      {maker:"スバル",model:"フォレスター",type:"SUV",seats:5,drive:"4WD",fuel:"ガソリン",price:300,img:"https://www.subaru.jp/forester/forester/design/exterior/images/design_main.jpg",url:"https://www.subaru.jp/forester/forester/"},
+      {maker:"スバル",model:"クロストレック",type:"SUV",seats:5,drive:"4WD",fuel:"ハイブリッド",price:288,img:"https://www.subaru.jp/crosstrek/crosstrek/design/exterior/images/kv.jpg",url:"https://www.subaru.jp/crosstrek/crosstrek/"},
+      {maker:"スバル",model:"BRZ",type:"スポーツ",seats:4,drive:"2WD",fuel:"ガソリン",price:308,img:"https://www.subaru.jp/brz/brz/design/exterior/images/kv.jpg",url:"https://www.subaru.jp/brz/brz/"},
+      // Mitsubishi
+      {maker:"三菱",model:"アウトランダーPHEV",type:"SUV",seats:7,drive:"4WD",fuel:"PHEV",price:462,img:"https://www.mitsubishi-motors.co.jp/lineup/outlander/special/movie/images/img_ogp.jpg",url:"https://www.mitsubishi-motors.co.jp/lineup/outlander/"},
+      {maker:"三菱",model:"デリカD:5",type:"ミニバン",seats:8,drive:"4WD",fuel:"ディーゼル",price:410,img:"https://www.mitsubishi-motors.co.jp/lineup/delica_d5/special/images/ogp.jpg",url:"https://www.mitsubishi-motors.co.jp/lineup/delica_d5/"},
+      {maker:"三菱",model:"eKクロスEV",type:"軽",seats:4,drive:"2WD",fuel:"EV",price:239,img:"https://www.mitsubishi-motors.co.jp/lineup/ek_x_ev/special/images/ogp.jpg",url:"https://www.mitsubishi-motors.co.jp/lineup/ek_x_ev/"},
+      // Suzuki
+      {maker:"スズキ",model:"スイフト",type:"コンパクト",seats:5,drive:"2WD",fuel:"ガソリン",price:180,img:"https://www.suzuki.co.jp/car/swift/img/ogp.jpg",url:"https://www.suzuki.co.jp/car/swift/"},
+      {maker:"スズキ",model:"ハスラー",type:"軽",seats:4,drive:"2WD",fuel:"ガソリン",price:148,img:"https://www.suzuki.co.jp/car/hustler/img/ogp.jpg",url:"https://www.suzuki.co.jp/car/hustler/"},
+      {maker:"スズキ",model:"ジムニーシエラ",type:"SUV",seats:4,drive:"4WD",fuel:"ガソリン",price:208,img:"https://www.suzuki.co.jp/car/jimny/img/ogp.jpg",url:"https://www.suzuki.co.jp/car/jimny/"},
+      {maker:"スズキ",model:"スペーシア",type:"軽",seats:4,drive:"2WD",fuel:"ハイブリッド",price:145,img:"https://www.suzuki.co.jp/car/spacia/img/ogp.jpg",url:"https://www.suzuki.co.jp/car/spacia/"},
+      // Daihatsu
+      {maker:"ダイハツ",model:"タフト",type:"軽",seats:4,drive:"2WD",fuel:"ガソリン",price:140,img:"https://www.daihatsu.co.jp/lineup/taft/img/taft_section01_pc.jpg",url:"https://www.daihatsu.co.jp/lineup/taft/"},
+      {maker:"ダイハツ",model:"ロッキー",type:"SUV",seats:5,drive:"2WD",fuel:"ハイブリッド",price:200,img:"https://www.daihatsu.co.jp/lineup/rocky/img/rocky_section01_pc.jpg",url:"https://www.daihatsu.co.jp/lineup/rocky/"},
+      {maker:"ダイハツ",model:"ムーヴキャンバス",type:"軽",seats:4,drive:"2WD",fuel:"ガソリン",price:150,img:"https://www.daihatsu.co.jp/lineup/move_canbus/img/kv.jpg",url:"https://www.daihatsu.co.jp/lineup/move_canbus/"},
+      { maker:"トヨタ", model:"ハイラックス",        type:"ピックアップ", seats:5, drive:"4WD", fuel:"ディーゼル", price:425, img:"https://toyota.jp/hilux/ogp.jpg",           url:"https://toyota.jp/hilux/" },
+      { maker:"トヨタ", model:"ランドクルーザー250", type:"SUV",         seats:7, drive:"4WD", fuel:"ディーゼル", price:630, img:"images/ランドクルーザー250 .png", url:"https://toyota.jp/landcruiser250/" },
+      { maker:"トヨタ", model:"ランドクルーザー70",  type:"SUV",         seats:5, drive:"4WD", fuel:"ディーゼル", price:480, img:"images/ランドクルーザー70.png",  url:"https://toyota.jp/landcruiser70/" },
+
+      { maker:"マツダ", model:"MAZDA3 XD",   type:"ハッチバック/セダン", seats:5, drive:"2WD", fuel:"ディーゼル", price:280, img:"https://www.mazda.co.jp/cars/mazda3/ogp.jpg", url:"https://www.mazda.co.jp/cars/mazda3/" },
+      { maker:"マツダ", model:"CX-3",        type:"SUV",                 seats:5, drive:"2WD", fuel:"ディーゼル", price:250, img:"https://www.mazda.co.jp/cars/cx-3/ogp.jpg",   url:"https://www.mazda.co.jp/cars/cx-3/" },
+      { maker:"マツダ", model:"CX-30",       type:"SUV",                 seats:5, drive:"2WD", fuel:"ディーゼル", price:290, img:"https://www.mazda.co.jp/cars/cx-30/ogp.jpg",  url:"https://www.mazda.co.jp/cars/cx-30/" },
+      { maker:"マツダ", model:"CX-5",        type:"SUV",                 seats:5, drive:"4WD", fuel:"ディーゼル", price:340, img:"https://www.mazda.co.jp/cars/cx-5/ogp.jpg",   url:"https://www.mazda.co.jp/cars/cx-5/" },
+      { maker:"マツダ", model:"CX-60",       type:"SUV",                 seats:5, drive:"4WD", fuel:"ディーゼル", price:360, img:"https://www.mazda.co.jp/cars/cx-60/ogp.jpg",  url:"https://www.mazda.co.jp/cars/cx-60/" },
+      { maker:"マツダ", model:"CX-80",       type:"SUV",                 seats:7, drive:"4WD", fuel:"ディーゼル", price:420, img:"https://www.mazda.co.jp/cars/cx-80/ogp.jpg",  url:"https://www.mazda.co.jp/cars/cx-80/" },
+
+      { maker:"三菱", model:"デリカD:5",    type:"ミニバン",            seats:8, drive:"4WD", fuel:"ディーゼル", price:430, img:"https://www.mitsubishi-motors.co.jp/lineup/delica_d5/ogp.jpg", url:"https://www.mitsubishi-motors.co.jp/lineup/delica_d5/" },
+      { maker:"三菱", model:"トライトン",    type:"ピックアップ",        seats:5, drive:"4WD", fuel:"ディーゼル", price:499, img:"https://www.mitsubishi-motors.co.jp/lineup/triton/ogp.jpg",    url:"https://www.mitsubishi-motors.co.jp/lineup/triton/" }
+    ];
+
+    // ---------------- 質問定義 ----------------
+    const steps=[
+      {key:"seats",question:"乗車人数",options:[{label:"〜2",value:"2"},{label:"〜5",value:"5"},{label:"6〜8",value:"8"}]},
+      {key:"type",question:"ボディタイプ",options:[{label:"軽",value:"軽"},{label:"コンパクト",value:"コンパクト"},{label:"セダン",value:"セダン"},{label:"SUV",value:"SUV"},{label:"ミニバン",value:"ミニバン"},{label:"スポーツ",value:"スポーツ"}]},
+      {key:"drive",question:"駆動方式",options:[{label:"2WD",value:"2WD"},{label:"4WD",value:"4WD"}]},
+      {key:"fuel",question:"燃料種別",options:[{label:"ガソリン",value:"ガソリン"},{label:"ハイブリッド",value:"ハイブリッド"},{label:"軽油",value:"ディーゼル"},{label:"EV",value:"EV"},{label:"PHEV",value:"PHEV"}]},
+      {key:"price",question:"予算上限(万円)",options:[{label:"200",value:"200"},{label:"300",value:"300"},{label:"400",value:"400"},{label:"500",value:"500"},{label:"600",value:"600"},{label:"700+",value:"9999"}]} // 9999=上限なし
+    ];
+
+    const answers={};
+    let currentStep=0;
+
+    const startBtn=document.getElementById("startBtn");
+    const formSection=document.getElementById("formSection");
+    const resultSection=document.getElementById("resultSection");
+    const prevBtn=document.getElementById("prevBtn");
+    const nextBtn=document.getElementById("nextBtn");
+    const progressBar=document.getElementById("progressBar");
+    const cardsEl=document.getElementById("cards");
+    const retryBtn=document.getElementById("retryBtn");
+    const shareBtn=document.getElementById("shareBtn");
+
+    // ヒーロー -> フォーム表示
+    startBtn.addEventListener("click",()=>{
+      // 診断を最初からリセット
+      Object.keys(answers).forEach(k=>delete answers[k]);
+      currentStep = 0;
+      // 既存のステップを削除して再生成
+      formSection.querySelectorAll('.step').forEach(el => el.remove());
+      renderSteps();
+      updateStep();
+      resultSection.style.display = 'none';
+      formSection.style.display = 'block';
+      document.getElementById("hero").scrollIntoView({behavior:"smooth"});
+    });
+
+    prevBtn.addEventListener("click",()=>{
+      if(currentStep>0){currentStep--;updateStep();}
+    });
+    nextBtn.addEventListener("click",()=>{
+      const selected=document.querySelector('.step.active input:checked');
+      if(!selected){alert('選択肢を選んでください');return;}
+      answers[steps[currentStep].key]=selected.value;
+      if(currentStep<steps.length-1){
+        currentStep++;updateStep();
+      }else{ // 診断実行
+        showResult();
+      }
+    });
+
+    retryBtn.addEventListener("click",()=>{
+      resultSection.style.display="none";
+      formSection.style.display="block";
+      currentStep=0;
+      updateStep();
+    });
+
+    shareBtn.addEventListener("click",async()=>{
+      if(navigator.share){
+        try{
+          await navigator.share({title:document.title,text:"おすすめ結果をチェック！",url:location.href});
+        }catch(e){console.error(e);}
+      }else{alert('ブラウザがWeb Share APIに対応していません');}
+    });
+
+    function renderSteps(){
+      const fragment=document.createDocumentFragment();
+      steps.forEach((s,i)=>{
+        const stepDiv=document.createElement('div');
+        stepDiv.className='step';
+        stepDiv.innerHTML=`<h2>質問${i+1}/${steps.length}: ${s.question}</h2><div class="options">${s.options.map(o=>`<label><input type='radio' name='${s.key}' value='${o.value}'><span>${o.label}</span></label>`).join('')}</div>`;
+        fragment.appendChild(stepDiv);
+      });
+      formSection.insertBefore(fragment,document.querySelector('.navBtns'));
+    }
+
+    function updateStep(){
+      const stepEls=document.querySelectorAll('.step');
+      stepEls.forEach((el,i)=>el.classList.toggle('active',i===currentStep));
+      progressBar.style.width=((currentStep)/steps.length*100)+'%';
+      prevBtn.disabled = currentStep === 0;
+      nextBtn.textContent=currentStep===steps.length-1?'診断する':'次へ';
+      // 過去回答を復元
+      const currentKey=steps[currentStep].key;
+      const selectedValue=answers[currentKey];
+      if(selectedValue){
+        const target=document.querySelector(`.step.active input[value='${selectedValue}']`);
+        if(target)target.checked=true;
+      }
+    }
+
+    function showResult(){
+      formSection.style.display='none';
+      const filtered=cars.filter(c=>{
+        if(answers.seats==='2' && c.seats>2)return false;
+        if(answers.seats==='5' && (c.seats<3||c.seats>5))return false;
+        if(answers.seats==='8' && c.seats<6)return false;
+        if(c.type!==answers.type)return false;
+        if(!c.drive.includes(answers.drive))return false;
+        if(c.fuel!==answers.fuel)return false;
+        if(c.price>Number(answers.price))return false;
+        return true;
+      });
+
+      cardsEl.innerHTML='';
+      if(filtered.length){
+        shuffle(filtered).slice(0,3).forEach(card=>cardsEl.appendChild(createCard(card)));
+        retryBtn.style.display='inline-block';
+      }else{
+        cardsEl.innerHTML='<p>該当する車が見つかりませんでした。</p>';
+        retryBtn.style.display='inline-block';
+      }
+      resultSection.style.display='block';
+      resultSection.scrollIntoView({behavior:'smooth'});
+    }
+
+    function createCard(car){
+      const div=document.createElement('div');
+      div.className='card';
+      div.innerHTML=`<img src='${car.img}' alt='${car.maker} ${car.model}'>
+        <h3>${car.maker} ${car.model}</h3>
+        <div class='specs'>
+          <div>タイプ: ${car.type}</div>
+          <div>乗車人数: ${car.seats}人</div>
+          <div>駆動: ${car.drive}</div>
+          <div>燃料: ${car.fuel}</div>
+          <div>価格: 約${car.price}万円〜</div>
+        </div>
+        <button onclick="window.open('${car.url}','_blank')" aria-label='メーカー公式サイトへ'>公式サイトへ</button>`;
+      return div;
+    }
+
+    function shuffle(arr){
+      return arr.sort(()=>Math.random()-0.5);
+    }
+  </script>
+</body>
+</html>
